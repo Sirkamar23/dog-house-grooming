@@ -164,6 +164,21 @@ h1, h2, h3 { font-family: var(--font-head); line-height: 1.15; margin: 0 0 .5em;
 .service-card.pop { animation: pop .35s ease; }
 @keyframes pop { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: none; } }
 
+/* ---------- Gallery page ---------- */
+.page-hero {
+  background:
+    radial-gradient(circle at 85% 20%, rgba(255, 166, 48, .25), transparent 45%),
+    radial-gradient(circle at 10% 90%, rgba(0, 167, 225, .15), transparent 40%),
+    var(--cream);
+  padding: 40px 0 48px; text-align: center;
+}
+.page-hero h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); margin-bottom: 10px; }
+.page-hero .lead { margin: 0 auto; max-width: 620px; }
+.back-link { display: inline-block; font-family: var(--font-head); font-weight: 600; text-decoration: none; margin-bottom: 14px; }
+.back-link:hover { color: var(--orange); }
+.gallery-page .gallery-section { padding-top: 40px; }
+.hero-buttons.center { justify-content: center; }
+
 /* ---------- Gallery ---------- */
 .gallery-section { background: var(--gray); }
 .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }

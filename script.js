@@ -31,6 +31,18 @@
     });
   });
 
+  // Arriving from the gallery page with a #section link: jump to it once
+  // images and web fonts are in (late fonts re-wrap text and shift the page)
+  if (location.hash.length > 1) {
+    window.addEventListener("load", () => {
+      const fontsReady = document.fonts ? document.fonts.ready : Promise.resolve();
+      fontsReady.then(() => {
+        const target = document.querySelector(location.hash);
+        if (target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - header.offsetHeight - 8, behavior: "instant" });
+      });
+    });
+  }
+
   // ---------- Header shadow, active nav link, floating CTA ----------
   const floatCta = document.getElementById("float-cta");
   const hero = document.querySelector(".hero");
@@ -40,7 +52,7 @@
   function onScroll() {
     const y = window.scrollY;
     header.classList.toggle("scrolled", y > 10);
-    floatCta.classList.toggle("visible", y > hero.offsetHeight * 0.6);
+    floatCta.classList.toggle("visible", y > (hero ? hero.offsetHeight * 0.6 : 150));
 
     let current = -1;
     sections.forEach((s, i) => {
@@ -90,68 +102,73 @@
     });
   });
 
-  // ---------- Gallery lightbox ----------
-  const items = [...document.querySelectorAll(".gallery-item")];
+  // ---------- Gallery lightbox (gallery page) ----------
   const lb = document.getElementById("lightbox");
-  const lbImg = document.getElementById("lb-img");
-  const lbCaption = document.getElementById("lb-caption");
-  let index = 0;
-  let lastFocus = null;
+  if (lb) initLightbox();
 
-  function show(i) {
-    index = (i + items.length) % items.length;
-    const thumb = items[index].querySelector("img");
-    lbImg.src = items[index].dataset.full;
-    lbImg.alt = thumb.alt;
-    lbCaption.textContent = `${thumb.alt} (${index + 1} of ${items.length})`;
-    // Preload neighbours for snappy navigation
-    [index + 1, index - 1].forEach((n) => {
-      const it = items[(n + items.length) % items.length];
-      new Image().src = it.dataset.full;
+  function initLightbox() {
+    const items = [...document.querySelectorAll(".gallery-item")];
+    const lbImg = document.getElementById("lb-img");
+    const lbCaption = document.getElementById("lb-caption");
+    let index = 0;
+    let lastFocus = null;
+
+    function show(i) {
+      index = (i + items.length) % items.length;
+      const thumb = items[index].querySelector("img");
+      lbImg.src = items[index].dataset.full;
+      lbImg.alt = thumb.alt;
+      lbCaption.textContent = `${thumb.alt} (${index + 1} of ${items.length})`;
+      // Preload neighbours for snappy navigation
+      [index + 1, index - 1].forEach((n) => {
+        const it = items[(n + items.length) % items.length];
+        new Image().src = it.dataset.full;
+      });
+    }
+    function openLb(i) {
+      lastFocus = document.activeElement;
+      show(i);
+      lb.hidden = false;
+      document.body.style.overflow = "hidden";
+      document.getElementById("lb-close").focus();
+    }
+    function closeLb() {
+      lb.hidden = true;
+      lbImg.src = "";
+      document.body.style.overflow = "";
+      if (lastFocus) lastFocus.focus();
+    }
+
+    items.forEach((item, i) => item.addEventListener("click", () => openLb(i)));
+    document.getElementById("lb-close").addEventListener("click", closeLb);
+    document.getElementById("lb-prev").addEventListener("click", () => show(index - 1));
+    document.getElementById("lb-next").addEventListener("click", () => show(index + 1));
+    // Tap outside the photo closes
+    lb.addEventListener("click", (e) => {
+      if (e.target === lb || e.target.classList.contains("lb-figure")) closeLb();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (lb.hidden) return;
+      if (e.key === "Escape") closeLb();
+      else if (e.key === "ArrowRight") show(index + 1);
+      else if (e.key === "ArrowLeft") show(index - 1);
+    });
+    // Swipe on phones
+    let touchX = null;
+    lb.addEventListener("touchstart", (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+    lb.addEventListener("touchend", (e) => {
+      if (touchX === null) return;
+      const dx = e.changedTouches[0].clientX - touchX;
+      if (Math.abs(dx) > 50) show(index + (dx < 0 ? 1 : -1));
+      touchX = null;
     });
   }
-  function openLb(i) {
-    lastFocus = document.activeElement;
-    show(i);
-    lb.hidden = false;
-    document.body.style.overflow = "hidden";
-    document.getElementById("lb-close").focus();
-  }
-  function closeLb() {
-    lb.hidden = true;
-    lbImg.src = "";
-    document.body.style.overflow = "";
-    if (lastFocus) lastFocus.focus();
-  }
 
-  items.forEach((item, i) => item.addEventListener("click", () => openLb(i)));
-  document.getElementById("lb-close").addEventListener("click", closeLb);
-  document.getElementById("lb-prev").addEventListener("click", () => show(index - 1));
-  document.getElementById("lb-next").addEventListener("click", () => show(index + 1));
-  // Tap outside the photo closes
-  lb.addEventListener("click", (e) => {
-    if (e.target === lb || e.target.classList.contains("lb-figure")) closeLb();
-  });
-  document.addEventListener("keydown", (e) => {
-    if (lb.hidden) return;
-    if (e.key === "Escape") closeLb();
-    else if (e.key === "ArrowRight") show(index + 1);
-    else if (e.key === "ArrowLeft") show(index - 1);
-  });
-  // Swipe on phones
-  let touchX = null;
-  lb.addEventListener("touchstart", (e) => { touchX = e.touches[0].clientX; }, { passive: true });
-  lb.addEventListener("touchend", (e) => {
-    if (touchX === null) return;
-    const dx = e.changedTouches[0].clientX - touchX;
-    if (Math.abs(dx) > 50) show(index + (dx < 0 ? 1 : -1));
-    touchX = null;
-  });
-
-  // ---------- Open now / Closed now (Los Angeles time) ----------
+  // ---------- Open now / Closed now (Los Angeles time, home page) ----------
   const OPEN_MIN = 10 * 60;  // 10:00 AM
   const CLOSE_MIN = 17 * 60; // 5:00 PM
   const badge = document.getElementById("status-badge");
+  if (!badge) return;
   const statusTime = document.getElementById("status-time");
   const dayIndex = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
